@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>三位數加減法競速賽 4-Player Battle</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Nunito', 'Microsoft JhengHei', 'PingFang HK', sans-serif;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body {
+      background: repeating-linear-gradient(45deg, #87CEEB, #87CEEB 20px, #9dd8f0 20px, #9dd8f0 40px);
+      color: #333;
+      overflow: hidden;
+      padding: 1vh 1vw;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      touch-action: none;
+    }
+
+    header {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+      padding: 0.8vh 1.8vw;
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 4px solid #fff;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+      margin-bottom: 1vh;
+      gap: 10px;
+    }
+
+    h1 {
+      font-size: clamp(1.1rem, 2vw, 1.75rem);
+      color: #d81b60;
+      text-shadow: 2px 2px 0px #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud {
+      font-size: clamp(0.85rem, 1.35vw, 1.15rem);
+      background: #fff;
+      padding: 4px 14px;
+      border-radius: 20px;
+      color: #ff9f43;
+      font-weight: 900;
+      border: 3px solid #ff9f43;
+      box-shadow: 0 3px 0 #ff9f43;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      background: #fff;
+      border: 3px solid #74b9ff;
+      color: #0984e3;
+      border-radius: 16px;
+      padding: 4px 10px;
+      font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #74b9ff;
+      transition: transform 0.1s;
+    }
+    .icon-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 0 0 #74b9ff;
+    }
+
+    .track-section {
+      background: #fff;
+      border-radius: 20px;
+      padding: 6px;
+      border: 4px solid #fff;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+      margin-bottom: 1vh;
+      position: relative;
+      flex: 0 0 21vh;
+      min-height: 110px;
+      display: flex;
+    }
+
+    canvas#trackCanvas {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, #a4ebf3 0%, #7ed6df 100%);
+      border-radius: 12px;
+      display: block;
+    }
+
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1vw;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        overflow-y: auto;
+        height: auto;
+        min-height: 100dvh;
+      }
+      .players-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .track-section {
+        flex: 0 0 150px;
+      }
+    }
+
+    .p-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 0.9vh 0.9vw;
+      border: 4px solid #ccc;
+      box-shadow: 0 6px 0 #ccc;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .p-box.p0 { border-color: #ff9ff3; box-shadow: 0 6px 0 #f368e0; background: #fff0f6; }
+    .p-box.p1 { border-color: #feca57; box-shadow: 0 6px 0 #ff9f43; background: #fff9e6; }
+    .p-box.p2 { border-color: #48dbfb; box-shadow: 0 6px 0 #0abde3; background: #e6fbff; }
+    .p-box.p3 { border-color: #1dd1a1; box-shadow: 0 6px 0 #10ac84; background: #e6fffa; }
+
+    .p-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 900;
+      font-size: clamp(0.85rem, 1.1vw, 1.05rem);
+      margin-bottom: 4px;
+    }
+
+    .p-badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.78rem;
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    }
+
+    .math-board {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 8px 6px;
+      border-radius: 14px;
+      border: 3px dashed #c8d6e5;
+      margin-bottom: 4px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 直式算式版面 */
+    .vertical-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(30px, 44px));
+      row-gap: 4px;
+      column-gap: 4px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .pv-label {
+      font-size: clamp(0.65rem, 0.85vw, 0.78rem);
+      font-weight: 900;
+      color: #8395a7;
+      letter-spacing: 1px;
+    }
+
+    /* 進位 / 退位小記號格 */
+    .carry-cell {
+      width: clamp(24px, 2.2vw, 30px);
+      height: clamp(20px, 2vh, 24px);
+      border-radius: 6px;
+      border: 1.5px dashed #cbd5e1;
+      background: #f8fafc;
+      color: #94a3b8;
+      font-size: clamp(0.65rem, 0.85vw, 0.8rem);
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .carry-cell:hover {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    .carry-cell.marked-add {
+      border: 2px solid #f59e0b;
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .carry-cell.marked-sub {
+      border: 2px solid #ef4444;
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .carry-spacer {
+      width: 24px;
+      height: 20px;
+    }
+
+    .v-digit {
+      font-size: clamp(1.35rem, 2.3vw, 2rem);
+      font-weight: 900;
+      color: #2f3542;
+      line-height: 1.1;
+      text-align: center;
+      width: 100%;
+    }
+
+    .v-op {
+      font-size: clamp(1.4rem, 2.3vw, 2rem);
+      font-weight: 900;
+      color: #5f27cd;
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    .v-line {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 4px;
+      background: #2f3542;
+      border-radius: 4px;
+      margin: 2px 0 4px;
+    }
+
+    /* 直式答題格 */
+    .ans-box {
+      width: clamp(32px, 3vw, 42px);
+      height: clamp(36px, 4.4vh, 46px);
+      border-radius: 10px;
+      border: 3px solid #74b9ff;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: clamp(1.3rem, 2.1vw, 1.85rem);
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.12s;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    .ans-box.active {
+      border-color: #ee5253;
+      background: #fff5f5;
+      color: #d63031;
+      box-shadow: 0 0 0 3px rgba(254, 202, 87, 0.85);
+      transform: scale(1.06);
+    }
+
+    .ans-box.correct-box {
+      border-color: #10ac84;
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .ans-box.wrong-box {
+      border-color: #ee5253;
+      background: #fee2e2;
+      color: #b91c1c;
+      animation: shake 0.3s ease-out;
+    }
+
+    .ans-placeholder {
+      color: #cbd5e1;
+      font-size: clamp(0.75rem, 1vw, 0.9rem);
+    }
+
+    .p-feedback {
+      height: 20px;
+      text-align: center;
+      font-size: clamp(0.75rem, 0.95vw, 0.88rem);
+      font-weight: 900;
+      margin-bottom: 4px;
+      color: #576574;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .p-feedback.correct { color: #10ac84; animation: pop 0.3s ease-out; }
+    .p-feedback.wrong { color: #ee5253; animation: shake 0.3s ease-out; }
+
+    @keyframes pop {
+      0% { transform: scale(0.85); opacity: 0.4; }
+      50% { transform: scale(1.12); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .mini-numpad {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      margin-top: auto;
+      flex: none;
+    }
+
+    .m-btn {
+      background: #fff;
+      color: #576574;
+      border: 2px solid #c8d6e5;
+      font-size: clamp(0.95rem, 1.45vw, 1.2rem);
+      padding: 0.6vh 0;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 900;
+      box-shadow: 0 3px 0 #c8d6e5;
+      transition: all 0.08s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .m-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 0 0 #c8d6e5;
+      background: #f1f2f6;
+    }
+
+    .m-btn-del { background: #ff9f43; color: white; border-color: #f39c12; box-shadow: 0 3px 0 #f39c12; }
+    .m-btn-del:active { background: #f39c12; }
+
+    .m-btn-clr { background: #ff6b6b; color: white; border-color: #ee5253; box-shadow: 0 3px 0 #ee5253; }
+    .m-btn-clr:active { background: #ee5253; }
+
+    .btn-prev { background: #74b9ff; color: white; border-color: #0984e3; box-shadow: 0 3px 0 #0984e3; }
+    .btn-prev:active { background: #0984e3; }
+
+    .m-btn-zero { grid-column: span 2; }
+
+    .m-btn-go {
+      background: #1dd1a1;
+      color: white;
+      grid-column: span 2;
+      border-color: #10ac84;
+      box-shadow: 0 3px 0 #10ac84;
+    }
+    .m-btn-go:active { background: #10ac84; }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 28px 26px;
+      border-radius: 25px;
+      text-align: center;
+      border: 6px solid #feca57;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+      max-width: 460px;
+      width: 92%;
+      animation: pop 0.35s ease-out;
+    }
+
+    .modal h2 {
+      font-size: 1.75rem;
+      color: #ff6b6b;
+      margin-bottom: 10px;
+    }
+
+    .mode-selector {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 14px 0 6px;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      padding: 7px 14px;
+      border-radius: 16px;
+      border: 3px solid #c8d6e5;
+      background: #f8fafc;
+      color: #576574;
+      font-weight: 900;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .mode-btn.selected {
+      border-color: #ff9f43;
+      background: #fff3e0;
+      color: #e67e22;
+      box-shadow: 0 3px 0 #ff9f43;
+    }
+
+    .start-btn {
+      background: #1dd1a1;
+      color: white;
+      font-size: 1.2rem;
+      border: none;
+      padding: 11px 28px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 900;
+      margin-top: 14px;
+      box-shadow: 0 5px 0 #10ac84;
+      transition: all 0.1s;
+    }
+    .start-btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 0 0 #10ac84;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏁 三位數加減法競速賽</h1>
+    <div class="header-controls">
+      <div class="hud" id="hud-txt">終點線：500m</div>
+      <button class="icon-btn" id="mute-btn" onclick="toggleMute()" title="開關音效">🔊</button>
+    </div>
+  </header>
+
+  <div class="track-section">
+    <canvas id="trackCanvas"></canvas>
+  </div>
+
+  <div class="players-grid">
+
+    <!-- Player 1 -->
+    <div class="p-box p0">
+      <div class="p-header">
+        <span style="color: #e84393;">🐰 兔兔</span>
+        <span class="p-badge" style="background:#ff789e;">P1</span>
+      </div>
+      <div class="math-board" id="q-0"></div>
+      <div class="p-feedback" id="fb-0">準備出發！</div>
+      <div class="mini-numpad">
+        <button class="m-btn" onclick="press(0,'7')">7</button>
+        <button class="m-btn" onclick="press(0,'8')">8</button>
+        <button class="m-btn" onclick="press(0,'9')">9</button>
+        <button class="m-btn m-btn-del" onclick="press(0,'DEL')">⌫</button>
+        <button class="m-btn" onclick="press(0,'4')">4</button>
+        <button class="m-btn" onclick="press(0,'5')">5</button>
+        <button class="m-btn" onclick="press(0,'6')">6</button>
+        <button class="m-btn m-btn-clr" onclick="press(0,'CLR')">C</button>
+        <button class="m-btn" onclick="press(0,'1')">1</button>
+        <button class="m-btn" onclick="press(0,'2')">2</button>
+        <button class="m-btn" onclick="press(0,'3')">3</button>
+        <button class="m-btn btn-prev" onclick="prevField(0)" title="切換數位">◀</button>
+        <button class="m-btn m-btn-zero" onclick="press(0,'0')">0</button>
+        <button class="m-btn m-btn-go" onclick="submitAns(0)">🚀</button>
+      </div>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="p-box p1">
+      <div class="p-header">
+        <span style="color: #e67e22;">🐻 小熊</span>
+        <span class="p-badge" style="background:#fbc531;">P2</span>
+      </div>
+      <div class="math-board" id="q-1"></div>
+      <div class="p-feedback" id="fb-1">準備出發！</div>
+      <div class="mini-numpad">
+        <button class="m-btn" onclick="press(1,'7')">7</button>
+        <button class="m-btn" onclick="press(1,'8')">8</button>
+        <button class="m-btn" onclick="press(1,'9')">9</button>
+        <button class="m-btn m-btn-del" onclick="press(1,'DEL')">⌫</button>
+        <button class="m-btn" onclick="press(1,'4')">4</button>
+        <button class="m-btn" onclick="press(1,'5')">5</button>
+        <button class="m-btn" onclick="press(1,'6')">6</button>
+        <button class="m-btn m-btn-clr" onclick="press(1,'CLR')">C</button>
+        <button class="m-btn" onclick="press(1,'1')">1</button>
+        <button class="m-btn" onclick="press(1,'2')">2</button>
+        <button class="m-btn" onclick="press(1,'3')">3</button>
+        <button class="m-btn btn-prev" onclick="prevField(1)" title="切換數位">◀</button>
+        <button class="m-btn m-btn-zero" onclick="press(1,'0')">0</button>
+        <button class="m-btn m-btn-go" onclick="submitAns(1)">🚀</button>
+      </div>
+    </div>
+
+    <!-- Player 3 -->
+    <div class="p-box p2">
+      <div class="p-header">
+        <span style="color: #0984e3;">🐱 貓貓</span>
+        <span class="p-badge" style="background:#00d2d3;">P3</span>
+      </div>
+      <div class="math-board" id="q-2"></div>
+      <div class="p-feedback" id="fb-2">準備出發！</div>
+      <div class="mini-numpad">
+        <button class="m-btn" onclick="press(2,'7')">7</button>
+        <button class="m-btn" onclick="press(2,'8')">8</button>
+        <button class="m-btn" onclick="press(2,'9')">9</button>
+        <button class="m-btn m-btn-del" onclick="press(2,'DEL')">⌫</button>
+        <button class="m-btn" onclick="press(2,'4')">4</button>
+        <button class="m-btn" onclick="press(2,'5')">5</button>
+        <button class="m-btn" onclick="press(2,'6')">6</button>
+        <button class="m-btn m-btn-clr" onclick="press(2,'CLR')">C</button>
+        <button class="m-btn" onclick="press(2,'1')">1</button>
+        <button class="m-btn" onclick="press(2,'2')">2</button>
+        <button class="m-btn" onclick="press(2,'3')">3</button>
+        <button class="m-btn btn-prev" onclick="prevField(2)" title="切換數位">◀</button>
+        <button class="m-btn m-btn-zero" onclick="press(2,'0')">0</button>
+        <button class="m-btn m-btn-go" onclick="submitAns(2)">🚀</button>
+      </div>
+    </div>
+
+    <!-- Player 4 -->
+    <div class="p-box p3">
+      <div class="p-header">
+        <span style="color: #00b894;">🐸 青蛙</span>
+        <span class="p-badge" style="background:#1dd1a1;">P4</span>
+      </div>
+      <div class="math-board" id="q-3"></div>
+      <div class="p-feedback" id="fb-3">準備出發！</div>
+      <div class="mini-numpad">
+        <button class="m-btn" onclick="press(3,'7')">7</button>
+        <button class="m-btn" onclick="press(3,'8')">8</button>
+        <button class="m-btn" onclick="press(3,'9')">9</button>
+        <button class="m-btn m-btn-del" onclick="press(3,'DEL')">⌫</button>
+        <button class="m-btn" onclick="press(3,'4')">4</button>
+        <button class="m-btn" onclick="press(3,'5')">5</button>
+        <button class="m-btn" onclick="press(3,'6')">6</button>
+        <button class="m-btn m-btn-clr" onclick="press(3,'CLR')">C</button>
+        <button class="m-btn" onclick="press(3,'1')">1</button>
+        <button class="m-btn" onclick="press(3,'2')">2</button>
+        <button class="m-btn" onclick="press(3,'3')">3</button>
+        <button class="m-btn btn-prev" onclick="prevField(3)" title="切換數位">◀</button>
+        <button class="m-btn m-btn-zero" onclick="press(3,'0')">0</button>
+        <button class="m-btn m-btn-go" onclick="submitAns(3)">🚀</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="modal-title">🏁 三位數加減法競速賽</h2>
+      <p id="modal-msg" style="margin: 6px 0 10px; line-height: 1.55; color: #576574; font-size: 0.98rem; font-weight: bold;">
+        用直式計算三位數加減法！🎉<br>
+        1. 由<b>個位</b>開始輸入答案（會自動移向左邊數位）<br>
+        2. 可點選上方虛線小格標記<b>進位 / 退位</b><br>
+        3. 每答對一題衝刺 +100m，率先到達 500m 奪冠！
+      </p>
+      <div class="mode-selector" id="mode-selector">
+        <button class="mode-btn selected" data-mode="mixed" onclick="selectMode('mixed')">加減混合</button>
+        <button class="mode-btn" data-mode="add" onclick="selectMode('add')">只練加法 (+)</button>
+        <button class="mode-btn" data-mode="sub" onclick="selectMode('sub')">只練減法 (−)</button>
+      </div>
+      <button class="start-btn" id="start-btn" onclick="startGame()">開始大戰 🚀</button>
+    </div>
+  </div>
+
+<script>
+  let audioCtx = null;
+  let isMuted = false;
+  let gameMode = 'mixed'; // 'mixed' | 'add' | 'sub'
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) audioCtx = new AudioContextClass();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+  }
+
+  function playSound(type) {
+    if (isMuted) return;
+    ensureAudio();
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'correct') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.09);
+      osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.36);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.36);
+    } else if (type === 'click') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(780, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } else if (type === 'wrong') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(240, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.28);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.28);
+    }
+  }
+
+  function selectMode(mode) {
+    gameMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.mode === mode);
+    });
+    playSound('click');
+  }
+
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // 隨機產生三位數加減法題目（包含進位、退位及隔位退位）
+  function generateQuestion(prevKey) {
+    let op;
+    if (gameMode === 'add') op = '+';
+    else if (gameMode === 'sub') op = '-';
+    else op = Math.random() < 0.5 ? '+' : '-';
+
+    let a, b, ans;
+    let attempts = 0;
+    do {
+      attempts++;
+      if (op === '+') {
+        a = randInt(125, 889);
+        // 約 30% 題目會進位至千位，70% 保持三位數和
+        if (Math.random() < 0.3) {
+          b = randInt(Math.max(115, 1000 - a), 899);
+        } else {
+          const maxB = Math.min(899, 999 - a);
+          if (maxB >= 105) {
+            b = randInt(105, maxB);
+          } else {
+            a = randInt(120, 580);
+            b = randInt(110, 999 - a);
+          }
+        }
+        ans = a + b;
+      } else {
+        // 約 25% 題目為十位為 0 的隔位退位練習（例如 502 - 168）
+        if (Math.random() < 0.25) {
+          const h = randInt(3, 9);
+          const u = randInt(0, 6);
+          a = h * 100 + u;
+          b = randInt(115, a - 25);
+        } else {
+          a = randInt(240, 998);
+          b = randInt(105, a - 18);
+        }
+        ans = a - b;
+      }
+    } while (`${a}${op}${b}` === prevKey && attempts < 10);
+
+    const hasThousand = ans >= 1000;
+    return {
+      a,
+      b,
+      op,
+      ans,
+      key: `${a}${op}${b}`,
+      hasThousand,
+      // 欄位索引：0=千位, 1=百位, 2=十位, 3=個位
+      minCol: hasThousand ? 0 : 1
+    };
+  }
+
+  const finishDist = 500;
+  let gameActive = false;
+  let animationFrameId = null;
+  let particles = [];
+
+  const carImg1 = new Image(); carImg1.src = "https://pmath-lab.github.io/decimals4/car1.png";
+  const carImg2 = new Image(); carImg2.src = "https://pmath-lab.github.io/decimals4/car2.png";
+  const carImg3 = new Image(); carImg3.src = "https://pmath-lab.github.io/decimals4/car3.png";
+  const carImg4 = new Image(); carImg4.src = "https://pmath-lab.github.io/decimals4/car4.png";
+
+  let players = [
+    { id: 0, name: "兔兔", emoji: "🐰", color: "#ff789e", img: carImg1, dist: 0, visualDist: 0, yOffset: -25, q: null, inputs: ['', '', '', ''], carries: [false, false, false, false], activeCol: 3, locked: false, status: 'idle', timer: null },
+    { id: 1, name: "小熊", emoji: "🐻", color: "#fbc531", img: carImg2, dist: 0, visualDist: 0, yOffset: -8,  q: null, inputs: ['', '', '', ''], carries: [false, false, false, false], activeCol: 3, locked: false, status: 'idle', timer: null },
+    { id: 2, name: "貓貓", emoji: "🐱", color: "#00d2d3", img: carImg3, dist: 0, visualDist: 0, yOffset: 10,  q: null, inputs: ['', '', '', ''], carries: [false, false, false, false], activeCol: 3, locked: false, status: 'idle', timer: null },
+    { id: 3, name: "青蛙", emoji: "🐸", color: "#1dd1a1", img: carImg4, dist: 0, visualDist: 0, yOffset: 28,  q: null, inputs: ['', '', '', ''], carries: [false, false, false, false], activeCol: 3, locked: false, status: 'idle', timer: null }
+  ];
+
+  const trackCanvas = document.getElementById('trackCanvas');
+  const tCtx = trackCanvas.getContext('2d');
+
+  document.addEventListener('contextmenu', event => event.preventDefault());
+
+  function resizeCanvas() {
+    trackCanvas.width = Math.max(200, trackCanvas.parentElement.clientWidth - 12);
+    trackCanvas.height = Math.max(90, trackCanvas.parentElement.clientHeight - 12);
+    renderTrack();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function startGame() {
+    ensureAudio();
+    document.getElementById('modal').style.display = 'none';
+    particles = [];
+
+    players.forEach(p => {
+      if (p.timer) {
+        clearTimeout(p.timer);
+        p.timer = null;
+      }
+      p.dist = 0;
+      p.visualDist = 0;
+      p.locked = false;
+      p.status = 'idle';
+      loadPlayerQuestion(p.id);
+    });
+
+    gameActive = true;
+    resizeCanvas();
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    gameLoop();
+  }
+
+  function loadPlayerQuestion(pId) {
+    const p = players[pId];
+    const prevKey = p.q ? p.q.key : '';
+    p.q = generateQuestion(prevKey);
+    p.inputs = ['', '', '', ''];
+    p.carries = [false, false, false, false];
+    p.activeCol = 3; // 由個位開始填寫
+    p.locked = false;
+    p.status = 'idle';
+
+    const fb = document.getElementById(`fb-${pId}`);
+    fb.innerText = "由個位開始輸入直式答案 👇";
+    fb.className = "p-feedback";
+    renderEquation(pId);
+  }
+
+  function toggleCarry(pId, col) {
+    if (!gameActive) return;
+    const p = players[pId];
+    if (p.locked) return;
+    p.carries[col] = !p.carries[col];
+    playSound('click');
+    renderEquation(pId);
+  }
+
+  function focusCol(pId, col) {
+    if (!gameActive) return;
+    const p = players[pId];
+    if (p.locked) return;
+    if (col < p.q.minCol || col > 3) return;
+    p.activeCol = col;
+    playSound('click');
+    renderEquation(pId);
+  }
+
+  function renderEquation(pId) {
+    const p = players[pId];
+    const container = document.getElementById(`q-${pId}`);
+    container.innerHTML = '';
+
+    if (!p.q) return;
+
+    const aStr = String(p.q.a).padStart(3, ' ');
+    const bStr = String(p.q.b).padStart(3, ' ');
+    const opSymbol = p.q.op === '-' ? '−' : '+';
+    const isAdd = p.q.op === '+';
+
+    const grid = document.createElement('div');
+    grid.className = 'vertical-grid';
+
+    // Row 1: 位值標題（千、百、十、個）
+    const labels = [p.q.hasThousand ? '千' : '', '百', '十', '個'];
+    labels.forEach(lbl => {
+      const div = document.createElement('div');
+      div.className = 'pv-label';
+      div.innerText = lbl;
+      grid.appendChild(div);
+    });
+
+    // Row 2: 進位 / 退位小記號列
+    for (let col = 0; col < 4; col++) {
+      // 加法可標記千(若有)、百、十；減法可標記百、十（退位點）
+      const canMark = isAdd
+        ? (col === 1 || col === 2 || (col === 0 && p.q.hasThousand))
+        : (col === 1 || col === 2);
+
+      if (canMark) {
+        const cBtn = document.createElement('div');
+        const marked = p.carries[col];
+        cBtn.className = 'carry-cell' + (marked ? (isAdd ? ' marked-add' : ' marked-sub') : '');
+        cBtn.innerText = marked ? (isAdd ? '+1' : '•') : (isAdd ? '進' : '退');
+        cBtn.title = isAdd ? '點選標記進位' : '點選標記退位';
+        cBtn.onclick = () => toggleCarry(pId, col);
+        grid.appendChild(cBtn);
+      } else {
+        const spacer = document.createElement('div');
+        spacer.className = 'carry-spacer';
+        grid.appendChild(spacer);
+      }
+    }
+
+    // Row 3: 第一個數（被加數 / 被減數）
+    const row1Cells = ['', aStr[0], aStr[1], aStr[2]];
+    row1Cells.forEach(ch => {
+      const div = document.createElement('div');
+      div.className = 'v-digit';
+      div.innerText = ch;
+      grid.appendChild(div);
+    });
+
+    // Row 4: 運算符號 + 第二個數（加數 / 減數）
+    const row2Cells = [opSymbol, bStr[0], bStr[1], bStr[2]];
+    row2Cells.forEach((ch, idx) => {
+      const div = document.createElement('div');
+      div.className = idx === 0 ? 'v-op' : 'v-digit';
+      div.innerText = ch;
+      grid.appendChild(div);
+    });
+
+    // Row 5: 直式橫線
+    const line = document.createElement('div');
+    line.className = 'v-line';
+    grid.appendChild(line);
+
+    // Row 6: 答題格（千、百、十、個）
+    const placeNames = ['千', '百', '十', '個'];
+    for (let col = 0; col < 4; col++) {
+      if (col < p.q.minCol) {
+        const empty = document.createElement('div');
+        grid.appendChild(empty);
+      } else {
+        const box = document.createElement('div');
+        let cls = 'ans-box';
+        if (p.status === 'correct') cls += ' correct-box';
+        else if (p.status === 'wrong') cls += ' wrong-box';
+        else if (p.activeCol === col) cls += ' active';
+
+        box.className = cls;
+        if (p.inputs[col] !== '') {
+          box.innerText = p.inputs[col];
+        } else {
+          box.innerHTML = `<span class="ans-placeholder">${placeNames[col]}</span>`;
+        }
+        box.onclick = () => focusCol(pId, col);
+        grid.appendChild(box);
+      }
+    }
+
+    container.appendChild(grid);
+  }
+
+  // 切換數位：個 -> 十 -> 百 -> (千) -> 個
+  function prevField(pId) {
+    if (!gameActive) return;
+    const p = players[pId];
+    if (p.locked || !p.q) return;
+
+    p.status = 'idle';
+    if (p.activeCol > p.q.minCol) {
+      p.activeCol--;
+    } else {
+      p.activeCol = 3;
+    }
+    playSound('click');
+    renderEquation(pId);
+  }
+
+  function press(pId, key) {
+    if (!gameActive) return;
+    const p = players[pId];
+    if (p.locked || !p.q) return;
+
+    ensureAudio();
+    p.status = 'idle';
+
+    if (key === 'DEL') {
+      if (p.inputs[p.activeCol] !== '') {
+        p.inputs[p.activeCol] = '';
+      } else if (p.activeCol < 3) {
+        p.activeCol++;
+        p.inputs[p.activeCol] = '';
+      }
+      playSound('click');
+    } else if (key === 'CLR') {
+      p.inputs = ['', '', '', ''];
+      p.activeCol = 3;
+      playSound('click');
+    } else {
+      p.inputs[p.activeCol] = key;
+      // 填完一格後自動向左移一格（個 -> 十 -> 百 -> 千）
+      if (p.activeCol > p.q.minCol) {
+        p.activeCol--;
+      }
+      playSound('click');
+    }
+
+    renderEquation(pId);
+  }
+
+  function submitAns(pId) {
+    if (!gameActive) return;
+    const p = players[pId];
+    if (p.locked || !p.q) return;
+
+    const enteredCols = p.inputs.slice(p.q.minCol);
+    if (enteredCols.every(v => v === '')) return;
+
+    // 組合已填寫的數位（未填的高位視為 0，但個位若為空則提示）
+    if (p.inputs[3] === '') {
+      playSound('wrong');
+      const fb = document.getElementById(`fb-${pId}`);
+      fb.className = "p-feedback wrong";
+      fb.innerText = "❌ 記得填寫個位數字喔！";
+      p.activeCol = 3;
+      renderEquation(pId);
+      return;
+    }
+
+    // 檢查中間是否有漏填（例如填了百位和個位，但十位留空）
+    let firstFilled = -1;
+    for (let c = p.q.minCol; c <= 3; c++) {
+      if (p.inputs[c] !== '') {
+        firstFilled = c;
+        break;
+      }
+    }
+    for (let c = firstFilled; c <= 3; c++) {
+      if (p.inputs[c] === '') {
+        playSound('wrong');
+        const fb = document.getElementById(`fb-${pId}`);
+        fb.className = "p-feedback wrong";
+        fb.innerText = "❌ 中間數位漏填了喔！";
+        p.activeCol = c;
+        renderEquation(pId);
+        return;
+      }
+    }
+
+    const userVal = parseInt(enteredCols.map(v => v === '' ? '0' : v).join(''), 10);
+    const fb = document.getElementById(`fb-${pId}`);
+    fb.style.animation = 'none';
+    fb.offsetHeight;
+    fb.style.animation = null;
+
+    if (userVal === p.q.ans) {
+      playSound('correct');
+      p.locked = true;
+      p.status = 'correct';
+      p.dist += 100;
+      fb.className = "p-feedback correct";
+      fb.innerText = "🌟 答對了！衝刺 +100m";
+      renderEquation(pId);
+
+      p.timer = setTimeout(() => {
+        if (gameActive) loadPlayerQuestion(pId);
+      }, 950);
+    } else {
+      playSound('wrong');
+      p.status = 'wrong';
+      fb.className = "p-feedback wrong";
+      fb.innerText = "❌ 算錯囉，檢查看看進位或退位！";
+      renderEquation(pId);
+    }
+  }
+
+  function gameLoop() {
+    if (!gameActive) return;
+    renderTrack();
+
+    const winner = players.find(p => p.visualDist >= finishDist - 2);
+    if (winner) {
+      gameActive = false;
+      players.forEach(p => {
+        if (p.timer) {
+          clearTimeout(p.timer);
+          p.timer = null;
+        }
+      });
+      const modal = document.getElementById('modal');
+      document.getElementById('modal-title').innerText = "🏆 萌爆冠軍誕生！";
+      document.getElementById('modal-msg').innerHTML = `<span style="font-size:3rem; display:block; margin:8px 0;">🥇</span>🎉 恭喜 <b>${winner.emoji} ${winner.name}</b> <br>率先衝過終點線！`;
+      document.getElementById('start-btn').innerText = "再戰一局 🚀";
+      modal.style.display = 'flex';
+      renderTrack();
+      return;
+    }
+
+    animationFrameId = requestAnimationFrame(gameLoop);
+  }
+
+  function drawFallbackCar(ctx, x, y, w, h, color, emoji) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x, y + h * 0.35, w, h * 0.45, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(x + w * 0.2, y + h * 0.12, w * 0.55, h * 0.32, 8);
+    ctx.fill();
+
+    // Wheels
+    ctx.fillStyle = '#2f3542';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.24, y + h * 0.82, 8, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.76, y + h * 0.82, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, x + w * 0.48, y + h * 0.28);
+  }
+
+  function renderTrack() {
+    const w = trackCanvas.width;
+    const h = trackCanvas.height;
+    tCtx.clearRect(0, 0, w, h);
+
+    // Road
+    tCtx.fillStyle = "#c8d6e5";
+    tCtx.beginPath();
+    tCtx.moveTo(20, 26);
+    tCtx.lineTo(w - 20, 26);
+    tCtx.lineTo(w, h - 8);
+    tCtx.lineTo(0, h - 8);
+    tCtx.fill();
+
+    // Center dashed line
+    tCtx.strokeStyle = "#fff";
+    tCtx.lineWidth = 4;
+    tCtx.setLineDash([20, 15]);
+    tCtx.beginPath();
+    tCtx.moveTo(10, h / 2 + 8);
+    tCtx.lineTo(w - 10, h / 2 + 8);
+    tCtx.stroke();
+    tCtx.setLineDash([]);
+
+    // Finish line
+    const finishX = w - 60;
+    for (let r = 0; r < 5; r++) {
+      const sqH = (h - 34) / 5;
+      const ySquare = 26 + r * sqH;
+      tCtx.fillStyle = (r % 2 === 0) ? "#fff" : "#333";
+      tCtx.fillRect(finishX, ySquare, 20, sqH);
+      tCtx.fillStyle = (r % 2 === 0) ? "#333" : "#fff";
+      tCtx.fillRect(finishX + 20, ySquare, 20, sqH);
+    }
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const pt = particles[i];
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.life -= 0.04;
+      pt.size += 0.2;
+      if (pt.life <= 0) {
+        particles.splice(i, 1);
+      } else {
+        tCtx.fillStyle = `rgba(255, 255, 255, ${pt.life})`;
+        tCtx.beginPath();
+        tCtx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+        tCtx.fill();
+      }
+    }
+
+    const sortedPlayers = [...players].sort((a, b) => a.yOffset - b.yOffset);
+    const carW = 72;
+    const carH = 52;
+    const baseCenterY = h / 2 - 12;
+
+    sortedPlayers.forEach(p => {
+      const speed = (p.dist - p.visualDist) * 0.1;
+      p.visualDist += speed;
+
+      let progress = p.visualDist / finishDist;
+      if (progress > 1) progress = 1;
+      const x = 20 + progress * (finishX - carW - 26);
+
+      const isDashing = speed > 0.5;
+      const bounceSpeed = isDashing ? 80 : 150;
+      const bounceAmp = isDashing ? 4 : (progress > 0 && progress < 1 ? 2 : 0);
+      const bounce = Math.sin(Date.now() / bounceSpeed + p.id * 10) * bounceAmp;
+      const carY = baseCenterY + p.yOffset + bounce;
+
+      let tilt = 0;
+      if (isDashing) {
+        tilt = -0.15;
+        if (Math.random() < 0.4) {
+          particles.push({
+            x: x + 10,
+            y: carY + carH - 8,
+            vx: -Math.random() * 2 - 1,
+            vy: Math.random() - 0.5,
+            life: 1,
+            size: Math.random() * 4 + 3
+          });
+        }
+      }
+
+      const shadowScale = isDashing ? 0.8 : 1;
+      tCtx.fillStyle = "rgba(0,0,0,0.2)";
+      tCtx.beginPath();
+      const shadowY = baseCenterY + p.yOffset + carH - 5;
+      tCtx.ellipse(x + carW / 2, shadowY, (carW / 2 - 5) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+      tCtx.fill();
+
+      const stretchSpeed = isDashing ? 80 : 200;
+      const stretchAmpY = isDashing ? 0.15 : 0.05;
+      const stretchAmpX = isDashing ? 0.05 : 0.02;
+      const cycle = Date.now() / stretchSpeed + p.id * 10;
+
+      const scaleY = 1 + Math.abs(Math.sin(cycle)) * stretchAmpY;
+      const scaleX = 1 - Math.abs(Math.sin(cycle)) * stretchAmpX;
+
+      tCtx.save();
+      tCtx.translate(x + carW / 2, carY + carH - 5);
+      tCtx.rotate(tilt);
+      tCtx.scale(scaleX, scaleY);
+      if (p.img && p.img.complete && p.img.naturalWidth > 0) {
+        tCtx.drawImage(p.img, -carW / 2, -(carH - 5), carW, carH);
+      } else {
+        drawFallbackCar(tCtx, -carW / 2, -(carH - 5), carW, carH, p.color, p.emoji);
+      }
+      tCtx.restore();
+    });
+  }
+
+  window.onload = function() {
+    players.forEach(p => loadPlayerQuestion(p.id));
+    resizeCanvas();
+  };
+</script>
+</body>
+</html>
